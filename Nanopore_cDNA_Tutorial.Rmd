@@ -525,6 +525,6 @@ conda list "samtools|minimap2|snakemake|rstudio"
 
 \pagebreak
 
-# references and citations
+# References and citations
 
 
