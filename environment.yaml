@@ -1,0 +1,16 @@
+channels:
+  - bioconda
+  - conda-forge
+  - r
+  - sagrudd
+dependencies:
+  - snakemake-minimal =5.2.4
+  - python =3.6
+  - samtools
+  - minimap2
+  - r-essentials
+  - r =3.5.1
+  - rstudio
+  - nanopore-r-cdna-deseq2
+  - openjdk
+  
