@@ -1,0 +1,530 @@
+---
+title: "cDNA expression profiling using DESeq2"
+date: "Report created: `r Sys.Date()`"
+output:
+  html_document:
+    number_sections: yes
+    self_contained: yes
+    theme: default
+    highlight: null
+    css: Static/ont_tutorial.css
+    toc: yes
+    toc_depth: 2
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+    df_print: paged
+link-citations: yes
+bibliography: Static/Bibliography.bib
+---
+
+
+
+```{r, echo=FALSE, include=FALSE}
+knitr::opts_chunk$set(tidy=TRUE, tidy.opts=list(width.cutoff=80), 
+                      fig.width=9, fig.height=6, warning=FALSE, message=FALSE, 
+                      kable.force.latex=TRUE,
+                      highlight=TRUE,
+                      cache.path="Analysis/Cache/cDNATutorial/")
+
+# library(TuPoreIal)  # ONT container package; deprecated ...
+library(tufte)
+library(digest)
+library(ShortRead)   # oh the irony!
+library(ggplot2)
+library(plyr)
+library(dplyr)       # used for the %>% filtering
+library(Rsubread)
+library(DESeq2)
+library(pcaMethods)
+library(kableExtra)  # rendering of tables...
+library(caTools)     # base64decode for embedded Snakefile
+library(xlsx)        # writing results to Excel files
+library(yaml)
+library(session)     # session persistence added as feature request
+
+source("Static/R/common.R")
+
+resultDir <- file.path("Analysis", "Results")
+dir.create(resultDir, showWarnings = FALSE, recursive=TRUE)
+
+config <- yaml.load_file("config.yaml")
+tutorialText   <- config$tutorialText
+
+persistenceData <- file.path(resultDir, "NanoporeDESeq2.Rdata")
+
+#### below are a couple of methods; these are for tutorials and classroom activities and are not used in this document
+
+plotExpressionForGene <- function(geneId) {
+  goiexpr <- plotCounts(deSeqObj, gene=geneId, intgroup="group", returnData = TRUE)
+  plot <- ggplot(goiexpr, aes(x=group, y=count, colour=group)) + 
+    geom_point(position=position_jitter(w=0.1,h=0), size=2) + 
+    scale_y_log10() + ggtitle(paste("Distribution of normalised read counts for",geneId)) + 
+    xlab("Experimental Condition") +ylab("normalised read count - log10 scale") + 
+    scale_colour_brewer(palette="Paired")
+  rprint(plot)
+}
+
+####### end of the classroom methods #######################################
+
+studyDesign <- data.frame()
+for (i in 1:length(config$Samples)) {
+  studyDesign <- rbind(studyDesign, 
+                       data.frame(samples=names(config$Samples[[i]][[1]]), 
+                                  filename=unlist(config$Samples[[i]][[1]]), 
+                                  group=names(config$Samples[[i]])))
+}
+
+studyDesign$replicate <- sapply(1:nrow(studyDesign), function(x)sum(studyDesign$group[1:x]==studyDesign$group[x]))
+studyDesign$md5 <- lapply(as.character(studyDesign$filename), md5sum)
+# let's use the provided filename as the key??
+studyDesign$group <- relevel(studyDesign$group, ref=config$referenceGroup)
+# quick tidy
+studyDesign <- studyDesign[,-which(colnames(studyDesign)=="samples")]
+
+
+slurpContent <- function(filename) {
+  include = as.logical(tutorialText)
+  if (include) {
+    paste(readLines(filename),collapse="\n")
+  }
+}
+
+```
+
+`r slurpContent("Static/TutorialPreamble.md")`
+
+
+
+# Study design
+
+The **`Nanopore_cDNA_Tutorial`** script has been used to generate this report. The configuration file, **`config.yaml`** has been parsed and sequencing files have been defined that describe a study design summarised in the table below. 
+
+
+
+```{r studyDesign, echo=FALSE}
+knitr::kable(studyDesign, caption="Study design for samples evaluated within this report", booktabs=TRUE, table.envir='table*', linesep="")  %>%
+  kable_styling(latex_options=c("hold_position", "scale_down")) %>%
+  add_footnote(c("please note md5 column - see glossary of terms"))
+
+```
+
+\pagebreak
+
+# Raw sequence review
+
+It is worth considering some of the sequence characteristics for each of the sequence libraries that has been prepared and included within the differential expression analysis. The statistics shown in the table below \ref{tab:summaryStatsTable} have been produced using the R **`ShortRead`** package (see @R-ShortRead). Loading the provided Fastq format sequence files into computer memory has allowed for the calculation of sequence length distribution, a review of sequence qualities, and the preparation of some minimal statistics that allow for the qualitative and quantitative review of these different sequence libraries. 
+
+
+```{r, echo=FALSE, cache=TRUE}
+
+processQCFastq <- function(rowname) {
+  row <- which(row.names(studyDesign)==rowname)
+  file <- as.character(studyDesign[row, "filename"])
+  fastq <- readFastq(file)
+  c(
+    reads = formatC(length(fastq), big.mark=","),
+    mbs = formatC(round(sum(width(fastq)) / 1000 / 1000, digits=1), big.mark=","),
+    min = min(width(fastq)),
+    max = max(width(fastq)),
+    mean = round(mean(width(fastq)), digits=1),
+    median = round(median(width(fastq)), digits=0),
+    qval = round(mean(alphabetScore(fastq) / width(fastq)), digits=1),
+    gc = round(mean(letterFrequency(sread(fastq), "GC")  / width(fastq)) * 100, digits=1),
+    n50 = ncalc(width(fastq), n=0.5),
+    l50 = lcalc(width(fastq), n=0.5),
+    n90 = ncalc(width(fastq), n=0.9),
+    l90 = lcalc(width(fastq), n=0.9)
+  )
+}
+
+data <- lapply(row.names(studyDesign), processQCFastq)
+qcData <- data.frame(data)
+colnames(qcData) <- row.names(studyDesign)
+```
+
+```{r summaryStatsTable, echo=FALSE, cache=TRUE, resize.width=100}
+knitr::kable(qcData, caption="Summary statistics for the cDNA libraries imported", booktabs=TRUE, table.envir='table*', linesep="")  %>%
+  kable_styling(latex_options=c("hold_position", font_size=9)) %>%
+  add_footnote(c(".")) # footnote required for corrected Tufte LaTeX rendering
+```
+
+&nbsp;
+
+The summary statistics displayed include observational metrics including the number of reads, information on the longest, shortest and mean sequence read lengths and other information that includes GC content, N50 and N90 read lengths. Ideally there will be similar characteristics across each of the sequence libraries - large differences in e.g. the number of reads, overall read quality and GC content may indicate non-biological differences between the samples - such differences may confound the statistical analysis and hinder the identification of differentially expressed genes.  
+
+\pagebreak
+
+# Violin plots of sequence characteristics
+
+While the summary statistics displayed in the table above provide a feel for the equivalence of the sequence libraries, a graphical representation may make the comparison of the libraries simpler. In this cDNA expression profiling tutorial, **`violin plots`** are used to summarise the distribution of sequence characteristics within and between libraries. The violin plot is similar to a boxplot but the thickness of the bar illustrates how abundant a value is within the given collection. The violin plot is thus a simple graphic that will enable the visualisation of similarity or dis-similarity across a sequence libraries.
+
+```{r violinLength, echo=FALSE, include=TRUE, fig.margin=FALSE, fig.fullwidth = FALSE, fig.cap="Violin plot showing the distribution of read lengths across the experimental samples. Ideally there should be largely similar distribution in each of the samples", cache=FALSE, }
+
+extractLengths <- function(rowname) {
+  row <- which(row.names(studyDesign)==rowname)
+  file <- as.character(studyDesign[row, "filename"])
+  fastq <- readFastq(file)
+  t(as.matrix(width(fastq)))
+}
+lengthData <- mapply(extractLengths, row.names(studyDesign))
+lengthDataMatrix <- data.frame(t(plyr::rbind.fill.matrix(lengthData)))
+colnames(lengthDataMatrix) <-  row.names(studyDesign)
+
+lengthMatrixMelt <- reshape2::melt(lengthDataMatrix, na.rm=TRUE, measure.vars=row.names(studyDesign))
+lengthMatrixMelt <- cbind(lengthMatrixMelt, group=studyDesign[match(lengthMatrixMelt$variable,  rownames(studyDesign)), "group"])
+
+plot <- ggplot(lengthMatrixMelt, aes(x=variable, y=value, fill=group)) + geom_violin() + scale_y_continuous(limits=c(0, as.numeric(quantile(lengthMatrixMelt$value, probs=c(0.975))))) + xlab("study sample") +  ylab("Distribution of Read Lengths (bp)") + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + scale_fill_brewer(palette="Paired") + labs(title="Violin plot showing distribution of read lengths across samples")
+
+suppressWarnings(print(plot))
+```
+
+
+
+```{r violinQuality, echo=FALSE, include=TRUE, fig.margin=FALSE, fig.fullwidth = FALSE, fig.cap="Violin Plot showing the distribution of read mean quality score across the sequenced samples. This distribution should be similar between samples.", cache=FALSE}
+
+extractQualities <- function(rowname) {
+  row <- which(row.names(studyDesign)==rowname)
+  file <- as.character(studyDesign[row, "filename"])
+  fastq <- readFastq(file)
+  t(as.matrix(alphabetScore(fastq) / width(fastq)))
+}
+qualityData <- mapply(extractQualities, row.names(studyDesign))
+qualityDataMatrix <- data.frame(t(plyr::rbind.fill.matrix(qualityData)))
+colnames(qualityDataMatrix) <-  row.names(studyDesign)
+
+qualityMatrixMelt <- reshape2::melt(qualityDataMatrix, na.rm=TRUE, measure.vars=row.names(studyDesign))
+qualityMatrixMelt <- cbind(qualityMatrixMelt, group=studyDesign[match(qualityMatrixMelt$variable,  rownames(studyDesign)), "group"])
+
+plotQ <- ggplot(qualityMatrixMelt, aes(x=variable, y=value, fill=group)) + geom_violin() + scale_y_continuous(limits=c(min(qualityMatrixMelt$value), max(qualityMatrixMelt$value))) + xlab("study sample") +  ylab("Distribution of Read Qualities (QV)") + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + scale_fill_brewer(palette="Paired") + labs(title="Violin plot showing distribution of read qualities across samples")
+
+suppressWarnings(print(plotQ))
+```
+
+It is recommended to review the violin plots of sequence lengths and sequence quality characteristics. The aim here is to assess the integrity and quality for each sample and to ensure that the quality, depth and characteristics will be suitable for the objectives of the expression profiling study. If there is considerable variability within and between the experimental samples then it is possible that a statistical analysis may not lead to the identification of differentially expressed gene transcripts.
+
+# Review of cDNA read mapping.
+
+From the Snakemake DAG presented earlier in the report, the workflow could be seen to include a `samtools flagstat` mapping statistic summary. These mapping statistics have been written to files in the **`Analysis/flagstat`** folder. These mapping statistics are useful for again evaluating the concordance of different sequence libraries and thus the overall quality of the study - ideally there should be robust similarities in the fraction of mapping sequence reads / multi-mapping reads etc.
+
+```{r flagstatStats, echo=FALSE, cache=FALSE}
+flagstatTargets <- file.path("Analysis", "flagstat", 
+    paste(tools::file_path_sans_ext(basename(as.character(studyDesign$filename)), compression=TRUE),".txt",sep="")
+)
+loadFlagstat <- function(file) {
+  x <- read.table(file, header=FALSE, sep=" ", fill=NA)[c(1:5),c(1,3)]
+  x[,1]
+}
+
+flagstatRes <- data.frame(matrix(unlist(lapply(flagstatTargets, loadFlagstat)), ncol=length(flagstatTargets)), stringsAsFactors = FALSE)
+colnames(flagstatRes) <- rownames(studyDesign)
+rownames(flagstatRes) <- c("read mappings", "Secondary", "Supplementary", "Duplicates", "Mapped")
+
+# include the measured number of reads; this is real
+flagstatRes[nrow(flagstatRes)+1,] <- as.numeric(gsub(",","",t(qcData)[, "reads"]))
+rownames(flagstatRes)[6] <- "nreads"
+
+getVal <- function(word) {
+  sum(as.numeric(unlist(strsplit(word, "/"))))
+}
+
+zreads <- unlist(lapply(flagstatRes["read mappings", ], getVal)) -
+  unlist(lapply(flagstatRes["Secondary", ], getVal)) -
+  unlist(lapply(flagstatRes["Supplementary", ], getVal)) - 
+  unlist(lapply(flagstatRes["Duplicates", ], getVal)) 
+
+flagstatRes[nrow(flagstatRes)+1,] <- zreads
+rownames(flagstatRes)[7] <- "zreads"
+
+flagstatRes[nrow(flagstatRes)+1,] <- as.numeric(flagstatRes["zreads", ]) / as.numeric(flagstatRes["nreads", ]) * 100
+rownames(flagstatRes)[8] <- "%mapping"
+
+
+flagstatRes <- flagstatRes[c(6,1,2,3,4,8),]
+
+#knitr::kable(flagstatRes, caption="Summary statistics from the Minimap2 long read spliced mapping.")
+
+knitr::kable(flagstatRes, caption="Summary statistics from the Minimap2 long read spliced mapping.", booktabs=TRUE, table.envir='table*', linesep="")  %>%
+  kable_styling(latex_options=c("hold_position", font_size=11)) %>%
+  add_footnote(c("information from samtools flagstat"))
+
+```
+
+&nbsp;
+
+The read mapping statistics shown in the table \ref{tab:flagstatStats} above are derived from the **`bam`** files produced during the **`minimap2`** sequence mapping against the reference genome (index). **`read mappings`** corresponds to the number of unique read mappings within the BAM file (one read may map to more than one location). **`Secondary`** corresponds to a secondary alignment for a read that can be mapped to multiple locations. A **`Supplementary`** alignment could correspond to an alignment that is chimeric or represents a structural variation or complex fusion event. A **`Duplicate`** read is unlikely but would represent multiple reads at the same locus that are likely the result of an amplification step in the library preparation. %Mapping corresponds to the percantage fraction of sequence reads that are mapped to the reference genome - this is calculated as the number of primary mappings against the total number of sequence reads observed in the starting fastq files.
+
+
+
+\pagebreak
+
+# Analysis of reads mapped to genes
+
+The first step in performing a differential expression analysis is to count the number of reads that are mapped to each of the genes annotated in the reference genome. In the previous section we mapped reads to the reference genome using the **`minimap2`** software - this has created positional information but mapped cDNA sequences do not yet correspond to genes. To establish the linkage between (spliced) genomic location and a gene feature requires *read summarisation* and *read quantification*. These tasks can be performed using the **`featureCounts`** method from the **`Rsubread`** package (see @R-Rsubread).
+
+
+\fontsize{7}{7}
+
+
+```{r rsubread, echo=FALSE, cache=FALSE, comment=NA}
+readCountTargets <- file.path("Analysis", "Minimap", 
+    paste(tools::file_path_sans_ext(basename(as.character(studyDesign$filename)), compression=TRUE), ".bam", sep="")
+)
+
+ExternalAnnotation = file.path("ReferenceData", basename(config$genome_annotation))
+
+geneCounts <- featureCounts(files=readCountTargets,
+                      annot.ext=ExternalAnnotation,
+                      isGTFAnnotationFile=TRUE,
+                      GTF.featureType="exon",
+                      GTF.attrType="gene_id",
+                      isLongRead=TRUE,
+                      nthreads = 4)$counts
+
+# Rename column hedders for clarity
+colnames(geneCounts) <- rownames(studyDesign)
+
+```
+
+\fontsize{10}{14}
+
+&nbsp;
+
+```{r geneCounts, echo=FALSE}
+knitr::kable(geneCounts[order(rowSums(geneCounts), decreasing=TRUE)[1:10],], caption="Table showing the 10 annotated gene features with the highest number of mapped reads", booktabs=TRUE, table.envir='table*', linesep="") %>%
+  kable_styling(latex_options=c("hold_position", font_size=11)) %>%
+  add_footnote(c("This is raw count data and no normalisation or transformation has been performed"))
+
+
+xlsExpressedGenes <- file.path(resultDir, "ExpressedGenes.xlsx")
+write.xlsx(geneCounts[which(rowSums(geneCounts) > 0),], file = xlsExpressedGenes,
+      sheetName = "ExpressedGenes", append = FALSE)
+```
+
+
+&nbsp;
+
+The Table \ref{tab:geneCounts} above shows the top 10 genes with the highest number of mapped reads. This is for information only. An **`Excel`** file containing the `r length(which(rowSums(geneCounts) > 0))` genes with one or more sequence reads has been prepared - this file is available at the following path
+
+~~~
+`r xlsExpressedGenes`
+~~~
+
+# DESeq2
+
+The analysis objective once we have have the matrix of read counts per gene per sample, is the quantification and statistical analysis of any systematic differences between conditions. The **`DESeq`** package (@R-DESeq2) provides methods to test for differential expression by use of negative binomial generalized linear models. 
+
+DESeq2 utilises the raw read count data from the previous section to model the between condition variability and to identify the differentially expressed genes. **`DESeq2`** does not use normalised data, but corrects internally for the relative library size to assess measurement precision. This is achieved by estimating size factors (controlling for the differences in sequencing depth), estimation of dispersion values (assessing the variance observed across individual genes) and fitting a generalised linear model.
+
+Pre-filtering is performed at this step of the analysis. In the initial setup of the **`Rmarkdown`** script we evaluated a variable, *`readCountMinThreshold`*, that describes the minimum number of sequence reads that should be considered for statistical analysis. Pre-filtering may not be strictly required - it does improve the performance of the method when time and memory footprint are considered. Results are extracted from the **`DESeq2`** data object - additional filtering is performed according the both an adjusted p-value (specified with the *`adjPValueThreshold`* parameter) and a log fold change threshold (specified with the *`lfcThreshold`* parameter). The p-value correction is performed according to the *fdr* method of Benjamini & Hochberg (@BH1995).
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
+
+deSeqRaw <- DESeqDataSetFromMatrix(countData=geneCounts, colData=studyDesign, design=~group)
+# filter out the features that do not contain at least min threshold of expressed genes
+deSeqRaw <- deSeqRaw[-which(rowSums(counts(deSeqRaw)) < config$readCountMinThreshold), ]
+
+# perform the differential expression analysis; use local dispersion fit
+deSeqObj <- DESeq(deSeqRaw, fitType="local")
+
+# and filter for differentially represented, according to LFC
+deSeqRes <- results(deSeqObj, alpha=config$adjPValueThreshold, pAdjustMethod="BH", lfcThreshold=config$lfcThreshold)
+
+# and show a brief summary for this differential expression object
+summaryDE <- capture.output(summary(deSeqRes))
+cat(paste(summaryDE[1:8], collapse="\n"))
+
+deData <- data.frame(results(deSeqObj, pAdjustMethod="BH"))
+
+
+xlsDiffExprGenes <- file.path(resultDir, "DiffExpressedGenes.xlsx")
+write.xlsx(deData[order(deData$padj),], file = xlsDiffExprGenes,
+      sheetName = "DiffExpressedGenes", append = FALSE)
+
+```
+
+The message above shows the characteristics of the DESeq2 based differential expression analysis. The summary shows both the number of (and percentage) of genes that have satisfed the thresholds of logFoldChange and adjusted p-value. The complete matrix of data results (no filtering by fold-change or statistical threshold) has been written to an Excel file. This file can be found at the following path.
+
+~~~
+`r xlsDiffExprGenes`
+~~~
+
+The table \ref{tab:diffExprTable} below shows the top 15 differentially expressed genes as ranked by their adjusted p-value. This list is not filtered for either statistical (adj.P.value) or magnitudinal (logFoldChange) relevance. The complete dataset is presented in the accompanying Excel file described above.
+
+
+```{r diffExprTable, echo=FALSE}
+knitr::kable(deData[order(deData$padj)[1:15],], digits = c(2,2,2,2,45,45), caption="The top 15 genes, ranked by adjusted P-value, from the DESeq2 analysis. Key information shown includes the mean reads per sample, log fold change between samples and the false discovery corrected p-value", booktabs=TRUE, table.envir='table*', linesep="")  %>%
+  kable_styling(latex_options=c("hold_position"), font_size=9) %>%
+  add_footnote(c("No statistical or magnitudinal filter has been applied"))
+```
+
+
+\pagebreak
+
+
+# Principal component analysis
+
+With multiple samples, different experimental conditions and hundreds or thousands of genes, gene expression data is highly dimensional. Principal Component Analysis (PCA) is a widely used method for the reduction of dimensionality within such data. Linear combinations of orthogonal gene expressions, or principal components, are calculated that in turn describe decreasing amounts of the total explainable variation within the sequence collection.
+
+The figure \ref{fig:pca} below is a PCA plot showing the distribution of sample data for the first two principal components. The first principal component is shown on the X-axis; the second on the Y. The total amount of variation explained is shown on the axis legends. In an ideal study a large amount of variation will be explained with these principal components - and the samples corresponding to the different treatment groups should demonstrate both spatial clustering within groups and clear separation between groups. This is an illustrative plot that should again reinforce expectations from such a study.
+
+```{r pca, echo=FALSE, include=TRUE, fig.margin=FALSE, fig.fullwidth = FALSE, fig.cap="Principal component analysis showing the relationship between the readcounts from the experimental samples. The amount of variance explained within the first two principal components is shown on the axis labels.", cache=FALSE}
+pcaMatrix <- counts(deSeqObj)
+md <- prep(t(pcaMatrix), scale="none", center=TRUE)
+pca <- pca(md, method="svd", center=TRUE, nPcs=3)
+xdata <- as.data.frame(pca@scores)
+xdata <- cbind(xdata, group=studyDesign$group[match(rownames(xdata), rownames(studyDesign))])
+x <- 1
+y <- 2
+xpercent <- round(pca@R2[x]*100, digits=1)
+ypercent <- round(pca@R2[y]*100, digits=1)
+xlab <- paste("Prin.Comp. ",x," (",xpercent,"%)",sep="")
+ylab <- paste("Prin.Comp. ",y," (",ypercent,"%)",sep="")
+
+plot <- ggplot(xdata, aes(x=PC1, y=PC2, colour=group)) + 
+  geom_point(size=5, shape=18) + 
+  scale_colour_brewer(palette="Paired") + 
+  geom_vline(xintercept=0, color="darkgray") + 
+  geom_hline(yintercept=0, color="darkgray") + 
+  ggtitle("PCA analysis of experimental samples") + 
+  ylab(paste("PC2 (",ypercent,"%)",sep=""))  + 
+  xlab(paste("PC1 (",xpercent,"%)",sep=""))
+
+print(plot)
+```
+
+
+\pagebreak
+
+# Volcano plot for condition `r gsub('.+: ', '', deSeqRes@elementMetadata@listData$description[2])`
+
+A volcano plot is a scatter-plot that is used to quickly identify changes in large gene expression data sets composed of replicate data. It plots significance versus fold-change on the y and x axes, respectively. The significance is scaled as a -log10 of the (adjusted) p-value. Volcano plots allow for a simple assessment of systematic variance between sample groups; statistically significant and magnitudinally pronouced changes in gene expression will be manifested as a scattering of data points towards the far top-left or top-right of the graph.
+
+```{r volcanoPlot, echo=FALSE, include=TRUE, fig.margin=FALSE, fig.fullwidth = FALSE, fig.cap="Volcano plot showing distribution of log fold changes and adjusted p values", cache=FALSE}
+
+volcanoSubstr <- results(deSeqObj)
+logUp <- which(volcanoSubstr$log2FoldChange >= config$lfcThreshold)
+logDown <- which(volcanoSubstr$log2FoldChange <= -config$lfcThreshold)
+withStat <- which(volcanoSubstr$padj <= config$adjPValueThreshold)
+colours <- c(noDifference="gray", upRegulated="red", downRegulated="green")
+gene <- rep("noDifference", nrow(volcanoSubstr))
+gene[logUp[logUp %in% withStat]] <- "upRegulated"
+gene[logDown[logDown %in% withStat]] <- "downRegulated"
+
+plot <- ggplot(data.frame(volcanoSubstr), aes(x=log2FoldChange, y=-log10(padj))) + 
+    geom_point(size=1.2) + 
+    geom_hline(yintercept=-log10(config$adjPValueThreshold), color="orange") + 
+    geom_vline(xintercept=-config$lfcThreshold, color="green") + 
+    geom_vline(xintercept=config$lfcThreshold, color="red") + 
+    aes(colour=gene) + 
+    scale_colour_manual(values=colours) +
+    ggtitle("Volcano plot showing distribution of lfc vs adjp for expressed genes")
+
+print(plot)
+
+```
+
+\pagebreak
+
+# Exploring genes of interest ...
+
+While a cDNA gene expression profiling study may be used to identify a set of genes that are differentially expressed, it is also worth considering if a known gene of interest is differentially expressed. This tutorial is analysing a small set of pre-selected sequence reads from a human expression study. From earlier tables we have seen the identification of genes that are both well expressed within this dataset and that appear differentially expressed between the two experimental conditions.
+
+For this demonstration let us imagine that the ENSEMBL gene with id `ENSG00000081870` is of interest. This appears within the mock dataset and has read counts in samples from both conditions. The code within this tutorial has created a number of data objects; these include **`deData`** (a *data.frame* containing the differential expression results from **`DESeq2`**), **`deSeqObj`** (a *DESeqDataSeq* containing the context for the **`DESeq2`** differential expression analysis), and **`geneCounts`** (the *matrix* of read counts from **`RSubread`**).
+
+Simple **`R`** code can be used to extract the mapping characteristics for this gene.
+
+\fontsize{8}{12}
+
+```{r geneOfInterest, comment=NA} 
+geneOfInterest <- "ENSG00000081870"
+geneOfInterestRawExpression <- as.data.frame(
+  t(rbind(
+    count=geneCounts[geneOfInterest,], 
+    group=as.character(studyDesign[colnames(geneCounts), "group"]
+  ))))
+print(geneOfInterestRawExpression)
+```
+
+\fontsize{10}{14}
+
+This shows the number of reads mapped from each of the sequence libraries considered to the gene space annotated for the gene. This is a raw unscaled value; it also makes sense to consider the normalised / corrected count as used for the statistical analysis. This corrected count, as explained earlier, allows for the differences in sequence depth that may be observed across the different sequence libraries. These data when plotted allow for an eye-ball analysis of differential expression (see figure \ref{fig:exprBoxPlot}.)
+
+\fontsize{8}{12}
+
+```{r normalisedGeneOfInterest, comment=NA}
+geneOfInterestNormalExpression <- plotCounts(deSeqObj, gene=geneOfInterest, intgroup="group", returnData = TRUE)
+print(geneOfInterestNormalExpression)
+```
+
+\fontsize{10}{14}
+
+```{r exprBoxPlot, echo=FALSE, include=TRUE, fig.margin=FALSE, fig.fullwidth = FALSE, fig.cap="Plot showing the distribution of normalised read counts by experimental condition", cache=FALSE}
+plot <- ggplot(geneOfInterestNormalExpression, aes(x=group, y=count, colour=group)) + 
+  geom_point(position=position_jitter(w=0.1,h=0), size=2) + 
+  scale_y_log10() + ggtitle("Distribution of normalised read counts for experimental conditions") + xlab("Experimental Condition") +ylab("normalised read count - log10 scale") + scale_colour_brewer(palette="Paired")
+print(plot)
+
+```
+
+The final question is whether this observation is statistically meaningful?
+
+\fontsize{8}{12}
+
+```{r, comment=NA}
+options(width = 100)
+deData[geneOfInterest,]
+```
+
+\fontsize{10}{14}
+
+If we look at the output we can see that the logFoldChange is *`r deData[geneOfInterest,]$log2FoldChange`* and the p-value is  *`r deData[geneOfInterest,]$pvalue`* (before FDR correction) or *`r deData[geneOfInterest,]$padj`* following FDR correction. 
+
+
+# Annotation and further analysis of differentially expressed genes
+
+There is a substantial amount of further analysis and annotation that could be performed using the study data produced. This tutorial does not pursue these analyses since there will be considerable reliance on reference resources and databases that will tie the analysis to a specific organism or genome database. A good starting place to continue the analysis started within this report would be
+
+&nbsp;
+
+`http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html`
+
+\pagebreak
+
+# Reproducible research - produce your own report
+
+This report has been created using **`Rmarkdown`**, publicly available **`R`** packages, and the \LaTeX document typesetting software for reproducibility. For clarity the **`R`** packages used, and their versions, is listed below.
+
+\fontsize{8}{12}
+
+```{r sessionInfo, eval=TRUE, echo=FALSE, comment=NA}
+options(width = 100)
+utils:::print.sessionInfo(sessionInfo()[-7], locale=FALSE)
+```
+
+```{r, echo=FALSE, include=FALSE, warning="hide"}
+save.session(persistenceData)
+```
+
+\fontsize{10}{14}
+
+It is also worth recording the versions of the software that have been used for the analysis.
+
+\fontsize{8}{12}
+
+```{r, engine='bash', echo=FALSE, comment=NA}
+source ~/.bashrc
+source activate diffExpression
+conda list "samtools|minimap2|snakemake|rstudio"
+```
+
+\fontsize{10}{14}
+
+`r slurpContent("Static/TutorialPostamble.md")`
+
+\pagebreak
+
+# references and citations
+
+
