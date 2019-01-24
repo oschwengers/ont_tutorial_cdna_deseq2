@@ -134,12 +134,14 @@ The precise commands within the **`Snakefile`** include
 
 # Run the snakemake workflow file
 
-The snakemake command is responsible for orchestrating the analytical workflow. The command with the parameters **`--forceall --dag`** is responsible for the preparation of the Directed Acyclic Graph that describes the workflow. This is displayed in the figure above.
+The snakemake command is responsible for orchestrating the analytical workflow. The snakemake command with the parameters **`snakemake --forceall --dag | dot -Tpng | display`** will prepare and display the Directed Acyclic Graph that describes the workflow. The graph for this tutorial is displayed in the figure above.
 
 \fontsize{8}{12}
 ```
-snakemake --forceall --dag | dot -Tpng > Analysis/StaticImages/dag1.png
-snakemake
+# just type snakemake to run the workflow
+# don't type <NPROC> but specify the number of processor cores available (e.g. 2 or 4)
+
+snakemake -j <NPROC>
 ```
 \fontsize{10}{14}
 

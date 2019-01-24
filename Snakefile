@@ -65,8 +65,9 @@ rule minimap_ref_idx:
     ReferenceGenome
   output:
     ReferenceIndex
+  threads: 40
   shell:
-    "minimap2 -k14 -w5 -d {output} {input}"
+    "minimap2 -t {threads} -k14 -w5 -d {output} {input}"
 
 
 rule minimap:
@@ -75,8 +76,9 @@ rule minimap:
     fastq=lambda wc: "RawData/" + wc.seqid + "." + file_dict[wc.seqid]
   output:
     bam="Analysis/Minimap/{seqid}.bam"
+  threads: 40
   shell:
-    "minimap2 -t 8 -ax splice -k14 --secondary=no {input.index} {input.fastq} | samtools view -Sb | samtools sort - -o {output.bam}"
+    "minimap2 -t {threads} -ax splice -k14 --secondary=no {input.index} {input.fastq} | samtools view -Sb | samtools sort - -o {output.bam}"
 
 
 rule flagstat:

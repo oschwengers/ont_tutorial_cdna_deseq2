@@ -13,5 +13,6 @@ dependencies:
   - rstudio
   - nanopore-r-cdna-deseq2
   - openjdk
-  - graphviz  # required for dag display 
+  - graphviz  # required for dag display
+  - imagemagick
   
