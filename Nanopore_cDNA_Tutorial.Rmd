@@ -26,7 +26,7 @@ knitr::opts_chunk$set(tidy=TRUE, tidy.opts=list(width.cutoff=80),
                       kable.force.latex=TRUE,
                       highlight=TRUE,
                       cache.path="Analysis/Cache/cDNATutorial/")
-
+options(width = 100)
 # library(TuPoreIal)  # ONT container package; deprecated ...
 library(tufte)
 library(digest)
@@ -104,8 +104,7 @@ The **`Nanopore_cDNA_Tutorial`** script has been used to generate this report. T
 
 ```{r studyDesign, echo=FALSE}
 knitr::kable(studyDesign, caption="Study design for samples evaluated within this report", booktabs=TRUE, table.envir='table*', linesep="")  %>%
-  kable_styling(latex_options=c("hold_position", "scale_down")) %>%
-  add_footnote(c("please note md5 column - see glossary of terms"))
+  kable_styling(latex_options=c("hold_position", "scale_down"))
 
 ```
 
@@ -113,7 +112,7 @@ knitr::kable(studyDesign, caption="Study design for samples evaluated within thi
 
 # Raw sequence review
 
-It is worth considering some of the sequence characteristics for each of the sequence libraries that has been prepared and included within the differential expression analysis. The statistics shown in the table below \ref{tab:summaryStatsTable} have been produced using the R **`ShortRead`** package (see @R-ShortRead). Loading the provided Fastq format sequence files into computer memory has allowed for the calculation of sequence length distribution, a review of sequence qualities, and the preparation of some minimal statistics that allow for the qualitative and quantitative review of these different sequence libraries. 
+It is worth considering some of the characteristics of each set of sequences included within the differential expression analysis. The statistics shown in the table below have been produced using the R **`ShortRead`** package (see @R-ShortRead). Loading the provided Fastq format sequence files into computer memory allows us to calculate sequence length distributions, a review of sequence qualities and some minimal statistics that enable the qualitative and quantitative review of these different datasets. 
 
 
 ```{r, echo=FALSE, cache=TRUE}
@@ -145,19 +144,18 @@ colnames(qcData) <- row.names(studyDesign)
 
 ```{r summaryStatsTable, echo=FALSE, cache=TRUE, resize.width=100}
 knitr::kable(qcData, caption="Summary statistics for the cDNA libraries imported", booktabs=TRUE, table.envir='table*', linesep="")  %>%
-  kable_styling(latex_options=c("hold_position", font_size=9)) %>%
-  add_footnote(c(".")) # footnote required for corrected Tufte LaTeX rendering
+  kable_styling(latex_options=c("hold_position", font_size=9)) 
 ```
 
 &nbsp;
 
-The summary statistics displayed include observational metrics including the number of reads, information on the longest, shortest and mean sequence read lengths and other information that includes GC content, N50 and N90 read lengths. Ideally there will be similar characteristics across each of the sequence libraries - large differences in e.g. the number of reads, overall read quality and GC content may indicate non-biological differences between the samples - such differences may confound the statistical analysis and hinder the identification of differentially expressed genes.  
+The summary statistics displayed include observational metrics such as the number of sequence reads, information on the longest, shortest and mean read lengths, GC content, N50 and N90 read lengths. Ideally sequences from each library will have similar characteristics. Large differences in e.g. the number of reads, overall read quality and GC content may indicate technical differences between the samples - such differences may confound the statistical analysis and hinder the identification of differentially expressed genes.  
 
 \pagebreak
 
 # Violin plots of sequence characteristics
 
-While the summary statistics displayed in the table above provide a feel for the equivalence of the sequence libraries, a graphical representation may make the comparison of the libraries simpler. In this cDNA expression profiling tutorial, **`violin plots`** are used to summarise the distribution of sequence characteristics within and between libraries. The violin plot is similar to a boxplot but the thickness of the bar illustrates how abundant a value is within the given collection. The violin plot is thus a simple graphic that will enable the visualisation of similarity or dis-similarity across a sequence libraries.
+While the summary statistics displayed in the table above provide a feel for the equivalence of the sequence libraries, a graphical representation may make the comparison of the libraries simpler. In this cDNA expression profiling tutorial, **`violin plots`** are used to summarise the distribution of sequence characteristics within and between libraries. The violin plot is similar to a boxplot but the thickness of the bar illustrates how abundant a value is within the given collection. The violin plot is thus a simple graphic that will enable the visualisation of similarity or dissimilarity across sequence libraries.
 
 ```{r violinLength, echo=FALSE, include=TRUE, fig.margin=FALSE, fig.fullwidth = FALSE, fig.cap="Violin plot showing the distribution of read lengths across the experimental samples. Ideally there should be largely similar distribution in each of the samples", cache=FALSE, }
 
@@ -181,7 +179,7 @@ suppressWarnings(print(plot))
 
 
 
-```{r violinQuality, echo=FALSE, include=TRUE, fig.margin=FALSE, fig.fullwidth = FALSE, fig.cap="Violin Plot showing the distribution of read mean quality score across the sequenced samples. This distribution should be similar between samples.", cache=FALSE}
+```{r violinQuality, echo=FALSE, include=TRUE, fig.margin=FALSE, fig.fullwidth = FALSE, fig.cap="Violin plot showing the distribution of read mean quality score across the sequenced samples. This distribution should be similar between samples.", cache=FALSE}
 
 extractQualities <- function(rowname) {
   row <- which(row.names(studyDesign)==rowname)
@@ -201,11 +199,11 @@ plotQ <- ggplot(qualityMatrixMelt, aes(x=variable, y=value, fill=group)) + geom_
 suppressWarnings(print(plotQ))
 ```
 
-It is recommended to review the violin plots of sequence lengths and sequence quality characteristics. The aim here is to assess the integrity and quality for each sample and to ensure that the quality, depth and characteristics will be suitable for the objectives of the expression profiling study. If there is considerable variability within and between the experimental samples then it is possible that a statistical analysis may not lead to the identification of differentially expressed gene transcripts.
+We recommend that you review the violin plots of sequence lengths and sequence quality characteristics. The aim here is to assess the integrity and quality for each sample and to ensure that the quality, depth and characteristics will be suitable for the objectives of the expression profiling study. If there is considerable variability within and between the experimental samples then it may not be possible to identify differentially expressed gene transcripts.
 
 # Review of cDNA read mapping.
 
-From the Snakemake DAG presented earlier in the report, the workflow could be seen to include a `samtools flagstat` mapping statistic summary. These mapping statistics have been written to files in the **`Analysis/flagstat`** folder. These mapping statistics are useful for again evaluating the concordance of different sequence libraries and thus the overall quality of the study - ideally there should be robust similarities in the fraction of mapping sequence reads / multi-mapping reads etc.
+The workflow includes a `samtools flagstat` mapping statistic summary, written to files in the **`Analysis/flagstat`** folder. These mapping statistics are useful for again evaluating the concordance of different sequence libraries and thus the overall quality of the study - ideally there should be robust similarities in the fraction of mapping sequence reads / multi-mapping reads etc.
 
 ```{r flagstatStats, echo=FALSE, cache=FALSE}
 flagstatTargets <- file.path("Analysis", "flagstat", 
@@ -244,7 +242,7 @@ flagstatRes <- flagstatRes[c(6,1,2,3,4,8),]
 
 #knitr::kable(flagstatRes, caption="Summary statistics from the Minimap2 long read spliced mapping.")
 
-knitr::kable(flagstatRes, caption="Summary statistics from the Minimap2 long read spliced mapping.", booktabs=TRUE, table.envir='table*', linesep="")  %>%
+knitr::kable(flagstatRes, caption="Summary statistics from the minimap2 long read spliced mapping.", booktabs=TRUE, table.envir='table*', linesep="")  %>%
   kable_styling(latex_options=c("hold_position", font_size=11)) %>%
   add_footnote(c("information from samtools flagstat"))
 
@@ -252,19 +250,15 @@ knitr::kable(flagstatRes, caption="Summary statistics from the Minimap2 long rea
 
 &nbsp;
 
-The read mapping statistics shown in the table \ref{tab:flagstatStats} above are derived from the **`bam`** files produced during the **`minimap2`** sequence mapping against the reference genome (index). **`read mappings`** corresponds to the number of unique read mappings within the BAM file (one read may map to more than one location). **`Secondary`** corresponds to a secondary alignment for a read that can be mapped to multiple locations. A **`Supplementary`** alignment could correspond to an alignment that is chimeric or represents a structural variation or complex fusion event. A **`Duplicate`** read is unlikely but would represent multiple reads at the same locus that are likely the result of an amplification step in the library preparation. %Mapping corresponds to the percantage fraction of sequence reads that are mapped to the reference genome - this is calculated as the number of primary mappings against the total number of sequence reads observed in the starting fastq files.
-
-
+The read mapping statistics shown in the table \ref{tab:flagstatStats} above are derived from the **`bam`** files produced by **`minimap2`** when reads are mapped to the reference genome (index). **`read mappings`** corresponds to the number of unique read mappings within the BAM file (one read may map to more than one location). **`Secondary`** corresponds to a secondary alignment for a read that can be mapped to multiple locations. A **`Supplementary`** alignment could correspond to an alignment that is chimeric or represents a structural variant or complex fusion event. A **`Duplicate`** read is unlikely but would represent multiple reads at the same locus that are likely the result of an amplification during the library preparation. %Mapping corresponds to the percantage fraction of sequence reads that are mapped to the reference genome - this is calculated as the number of primary mappings against the total number of sequence reads observed in the starting fastq files.
 
 \pagebreak
 
 # Analysis of reads mapped to genes
 
-The first step in performing a differential expression analysis is to count the number of reads that are mapped to each of the genes annotated in the reference genome. In the previous section we mapped reads to the reference genome using the **`minimap2`** software - this has created positional information but mapped cDNA sequences do not yet correspond to genes. To establish the linkage between (spliced) genomic location and a gene feature requires *read summarisation* and *read quantification*. These tasks can be performed using the **`featureCounts`** method from the **`Rsubread`** package (see @R-Rsubread).
-
+The first step in performing a differential expression analysis is to count the number of reads that are mapped to each of the genes annotated in the reference genome. In the previous section we mapped reads to the reference genome using the **`minimap2`** software - this has created positional information but mapped cDNA sequences do not yet correspond to genes. Establishing the linkage between (spliced) genomic location and a gene feature requires *read summarisation* and *read quantification*. These tasks can be performed using the **`featureCounts`** method from the **`Rsubread`** package (see @R-Rsubread).
 
 \fontsize{7}{7}
-
 
 ```{r rsubread, echo=FALSE, cache=FALSE, comment=NA}
 readCountTargets <- file.path("Analysis", "Minimap", 
@@ -279,7 +273,11 @@ geneCounts <- featureCounts(files=readCountTargets,
                       GTF.featureType="exon",
                       GTF.attrType="gene_id",
                       isLongRead=TRUE,
+                      largestOverlap=TRUE,
+                      useMetaFeatures=TRUE,
                       nthreads = 4)$counts
+# largestOverlap sorts the multi-mapping challenge with long reads
+# reportReads="CORE" can be appended to get info on read status
 
 # Rename column hedders for clarity
 colnames(geneCounts) <- rownames(studyDesign)
@@ -312,11 +310,13 @@ The Table \ref{tab:geneCounts} above shows the top 10 genes with the highest num
 
 # DESeq2
 
-The analysis objective once we have have the matrix of read counts per gene per sample, is the quantification and statistical analysis of any systematic differences between conditions. The **`DESeq`** package (@R-DESeq2) provides methods to test for differential expression by use of negative binomial generalized linear models. 
+Once we have have the matrix of read counts per gene per sample, the analysis objective is the quantification and statistical analysis of any systematic differences between conditions. The **`DESeq2`** package (@R-DESeq2) provides methods to test for differential expression by use of negative binomial generalized linear models. 
 
-DESeq2 utilises the raw read count data from the previous section to model the between condition variability and to identify the differentially expressed genes. **`DESeq2`** does not use normalised data, but corrects internally for the relative library size to assess measurement precision. This is achieved by estimating size factors (controlling for the differences in sequencing depth), estimation of dispersion values (assessing the variance observed across individual genes) and fitting a generalised linear model.
+DESeq2 utilises the raw read count data from the previous section to model the between condition variability and to identify the differentially expressed genes. **`DESeq2`** does not use normalised data, but corrects internally for the relative library size to assess measurement precision. 
 
-Pre-filtering is performed at this step of the analysis. In the initial setup of the **`Rmarkdown`** script we evaluated a variable, *`readCountMinThreshold`*, that describes the minimum number of sequence reads that should be considered for statistical analysis. Pre-filtering may not be strictly required - it does improve the performance of the method when time and memory footprint are considered. Results are extracted from the **`DESeq2`** data object - additional filtering is performed according the both an adjusted p-value (specified with the *`adjPValueThreshold`* parameter) and a log fold change threshold (specified with the *`lfcThreshold`* parameter). The p-value correction is performed according to the *fdr* method of Benjamini & Hochberg (@BH1995).
+Pre-filtering is performed at this step of the analysis. In the initial setup of the **`Rmarkdown`** script we evaluated a variable, *`readCountMinThreshold`*, that describes the minimum number of sequence reads that should be considered for statistical analysis. This Pre-filtering step improves the performance of the method. 
+
+Differential expression results are filtered by adjusted P-value and log2 fold change thresholds (both these thresholds can be configured in the **`config.yaml`** file). The P-value correction is performed according to the *fdr* method of Benjamini & Hochberg (@BH1995).
 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
@@ -344,17 +344,17 @@ write.xlsx(deData[order(deData$padj),], file = xlsDiffExprGenes,
 
 ```
 
-The message above shows the characteristics of the DESeq2 based differential expression analysis. The summary shows both the number of (and percentage) of genes that have satisfed the thresholds of logFoldChange and adjusted p-value. The complete matrix of data results (no filtering by fold-change or statistical threshold) has been written to an Excel file. This file can be found at the following path.
+The summary above shows the characteristics of the DESeq2 based differential expression analysis. The summary shows both the number of (and percentage) of genes that have satisfed the thresholds of logFoldChange and adjusted P-value. The complete matrix of data results (no filtering by fold-change or statistical threshold) has been written to an Excel file. This file can be found at the following path.
 
 ~~~
 `r xlsDiffExprGenes`
 ~~~
 
-The table \ref{tab:diffExprTable} below shows the top 15 differentially expressed genes as ranked by their adjusted p-value. This list is not filtered for either statistical (adj.P.value) or magnitudinal (logFoldChange) relevance. The complete dataset is presented in the accompanying Excel file described above.
+The table \ref{tab:diffExprTable} below shows the top 15 differentially expressed genes as ranked by their adjusted P-value. This list is not filtered for either statistical (adj.P.value) or magnitudinal (logFoldChange) relevance. The complete dataset is presented in the accompanying Excel file described above.
 
 
 ```{r diffExprTable, echo=FALSE}
-knitr::kable(deData[order(deData$padj)[1:15],], digits = c(2,2,2,2,45,45), caption="The top 15 genes, ranked by adjusted P-value, from the DESeq2 analysis. Key information shown includes the mean reads per sample, log fold change between samples and the false discovery corrected p-value", booktabs=TRUE, table.envir='table*', linesep="")  %>%
+knitr::kable(deData[order(deData$padj)[1:15],], digits = c(2,2,2,2,45,45), caption="The top 15 genes, ranked by adjusted P-value, from the DESeq2 analysis. Key information shown includes the mean reads per sample, log fold change between samples and the false discovery corrected P-value", booktabs=TRUE, table.envir='table*', linesep="")  %>%
   kable_styling(latex_options=c("hold_position"), font_size=9) %>%
   add_footnote(c("No statistical or magnitudinal filter has been applied"))
 ```
@@ -399,7 +399,7 @@ print(plot)
 
 # Volcano plot for condition `r gsub('.+: ', '', deSeqRes@elementMetadata@listData$description[2])`
 
-A volcano plot is a scatter-plot that is used to quickly identify changes in large gene expression data sets composed of replicate data. It plots significance versus fold-change on the y and x axes, respectively. The significance is scaled as a -log10 of the (adjusted) p-value. Volcano plots allow for a simple assessment of systematic variance between sample groups; statistically significant and magnitudinally pronouced changes in gene expression will be manifested as a scattering of data points towards the far top-left or top-right of the graph.
+A volcano plot is a scatter-plot that is used to quickly identify changes in large gene expression data sets composed of replicate data. It plots significance versus fold-change on the y and x axes, respectively. The significance is scaled as a -log10 of the (adjusted) P-value. Volcano plots allow for a simple assessment of systematic variance between sample groups; statistically significant and magnitudinally pronouced changes in gene expression will be manifested as a scattering of data points towards the far top left or top right of the graph.
 
 ```{r volcanoPlot, echo=FALSE, include=TRUE, fig.margin=FALSE, fig.fullwidth = FALSE, fig.cap="Volcano plot showing distribution of log fold changes and adjusted p values", cache=FALSE}
 
@@ -429,11 +429,11 @@ print(plot)
 
 # Exploring genes of interest ...
 
-While a cDNA gene expression profiling study may be used to identify a set of genes that are differentially expressed, it is also worth considering if a known gene of interest is differentially expressed. This tutorial is analysing a small set of pre-selected sequence reads from a human expression study. From earlier tables we have seen the identification of genes that are both well expressed within this dataset and that appear differentially expressed between the two experimental conditions.
+While a cDNA gene expression profiling study may be used to identify a set of genes that are differentially expressed, it is also worth considering if a single gene of interest is differentially expressed. In this tutorial we are analysing a small set of pre-selected sequence reads from a human expression study. From earlier tables we have seen the identification of genes that are both well expressed within this dataset and which appear differentially expressed between the two experimental conditions.
 
-For this demonstration let us imagine that the ENSEMBL gene with id `ENSG00000081870` is of interest. This appears within the mock dataset and has read counts in samples from both conditions. The code within this tutorial has created a number of data objects; these include **`deData`** (a *data.frame* containing the differential expression results from **`DESeq2`**), **`deSeqObj`** (a *DESeqDataSeq* containing the context for the **`DESeq2`** differential expression analysis), and **`geneCounts`** (the *matrix* of read counts from **`RSubread`**).
+For this demonstration let us imagine that the ENSEMBL gene with id `ENSG00000081870` is of interest. This is present within the example dataset and has read counts in samples from both conditions. 
 
-Simple **`R`** code can be used to extract the mapping characteristics for this gene.
+The **`R`** code below demonstrates how the mapping characteristics for this gene may be explored.
 
 \fontsize{8}{12}
 
@@ -449,7 +449,9 @@ print(geneOfInterestRawExpression)
 
 \fontsize{10}{14}
 
-This shows the number of reads mapped from each of the sequence libraries considered to the gene space annotated for the gene. This is a raw unscaled value; it also makes sense to consider the normalised / corrected count as used for the statistical analysis. This corrected count, as explained earlier, allows for the differences in sequence depth that may be observed across the different sequence libraries. These data when plotted allow for an eye-ball analysis of differential expression (see figure \ref{fig:exprBoxPlot}.)
+The output from the R commands shows the number of reads that map to the annotated gene. This is a raw unscaled value.
+
+The R code below shows the corrected count data for the gene.
 
 \fontsize{8}{12}
 
@@ -459,6 +461,9 @@ print(geneOfInterestNormalExpression)
 ```
 
 \fontsize{10}{14}
+
+It is also possible to present a plot that shows the count data for this single gene across the experimental conditions. An example plot is shown below.
+
 
 ```{r exprBoxPlot, echo=FALSE, include=TRUE, fig.margin=FALSE, fig.fullwidth = FALSE, fig.cap="Plot showing the distribution of normalised read counts by experimental condition", cache=FALSE}
 plot <- ggplot(geneOfInterestNormalExpression, aes(x=group, y=count, colour=group)) + 
@@ -473,13 +478,12 @@ The final question is whether this observation is statistically meaningful?
 \fontsize{8}{12}
 
 ```{r, comment=NA}
-options(width = 100)
 deData[geneOfInterest,]
 ```
 
 \fontsize{10}{14}
 
-If we look at the output we can see that the logFoldChange is *`r deData[geneOfInterest,]$log2FoldChange`* and the p-value is  *`r deData[geneOfInterest,]$pvalue`* (before FDR correction) or *`r deData[geneOfInterest,]$padj`* following FDR correction. 
+If we look at the output we can see that the logFoldChange is *`r round(deData[geneOfInterest,]$log2FoldChange, digits=2)`* and the P-value is  *`r round(deData[geneOfInterest,]$pvalue, digits=3)`* (before FDR correction) or *`r round(deData[geneOfInterest,]$padj, digits=3)`* using the BH FDR correction mentioned earlier. 
 
 
 # Annotation and further analysis of differentially expressed genes
@@ -494,12 +498,11 @@ There is a substantial amount of further analysis and annotation that could be p
 
 # Reproducible research - produce your own report
 
-This report has been created using **`Rmarkdown`**, publicly available **`R`** packages, and the \LaTeX document typesetting software for reproducibility. For clarity the **`R`** packages used, and their versions, is listed below.
+This report has been created using **`Rmarkdown`**, publicly available **`R`** packages, and the \LaTeX document typesetting software for reproducibility. For clarity the **`R`** packages used, and their versions, are listed below.
 
 \fontsize{8}{12}
 
 ```{r sessionInfo, eval=TRUE, echo=FALSE, comment=NA}
-options(width = 100)
 utils:::print.sessionInfo(sessionInfo()[-7], locale=FALSE)
 ```
 
@@ -515,7 +518,7 @@ It is also worth recording the versions of the software that have been used for 
 
 ```{r, engine='bash', echo=FALSE, comment=NA}
 source ~/.bashrc
-source activate diffExpression
+source activate cDNA_DESeq2
 conda list "samtools|minimap2|snakemake|rstudio"
 ```
 
