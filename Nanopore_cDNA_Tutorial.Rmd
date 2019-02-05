@@ -519,8 +519,6 @@ It is also worth recording the versions of the software that have been used for 
 \fontsize{8}{12}
 
 ```{r, engine='bash', echo=FALSE, comment=NA}
-source ~/.bashrc
-source activate cDNA_DESeq2
 conda list "samtools|minimap2|snakemake|rstudio"
 ```
 
