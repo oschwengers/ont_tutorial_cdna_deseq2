@@ -20,7 +20,7 @@ Editing of the workflow's configuration file, **`config.yaml`**, will allow the 
 
 ## The computational requirements include: 
 
-* Computer running Linux (Centos7, Ubuntu 18_10, Fedora 29) - also valided on macOS (Mojave) 
+* Computer running Linux (Centos7, Ubuntu 18_10, Fedora 29) - also validated on macOS (Mojave) 
 * At least 16 Gb RAM - swap space of at least 8Gb ideal
 * At least 15 Gb spare disk space for analysis and indices
 * Runtime with provided example data - approximately 20 minutes
@@ -29,7 +29,7 @@ Editing of the workflow's configuration file, **`config.yaml`**, will allow the 
 
 # Software installation
 
-1. Most software dependencies are managed though **`conda`**. Install as described at  <br> [https://conda.io/docs/install/quick.html](https://conda.io/docs/install/quick.html). You will need to accept the license agreement during installation and we recommended that you allow the Conda installer to prepend its path to your `.bashrc` file when asked.
+1. Most software dependencies are managed though **`conda`**. Install as described at  <br> [https://conda.io/docs/install/quick.html](https://conda.io/docs/install/quick.html). You will need to accept the license agreement during installation and we recommend that you allow the Conda installer to prepend its path to your `.bashrc` file when asked.
 ```
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
     bash Miniconda3-latest-Linux-x86_64.sh
@@ -64,9 +64,9 @@ Differential gene expression analysis aims to identify genes that show statistic
   
 Differential gene expression analysis requires a "snapshot" of gene activity. In this context, gene activity corresponds to the quantity of messenger RNAs (mRNA) transcribed from each gene within the organism/tissue/culture being investigated. The greater the number of mRNA molecules observed from a given gene, the higher the expression level. In order to determine expression levels across the whole genome, sequence data specifically targeting the mRNA molecules can be generated. 
 
-[Oxford Nanopore Technologies](https://nanoporetech.com) provides a number of [sequencing solutions](https://nanoporetech.com/rna) to allow users to generate a snapshot of gene expression. This can be achieved by both sequencing the mRNA [directly](https://store.nanoporetech.com/catalog/product/view/id/167/s/direct-rna-sequencing-kit/category/28/), or via a complementary DNA ([cDNA](https://store.nanoporetech.com/catalog/product/view/id/177/s/cdna-pcr/category/28/)) proxy. In contrast to short read sequencing technologies, entire mRNA transcripts can be captured as single reads. The example data provided with this tutorial is from a study based on the [PCR-cDNA](https://store.nanoporetech.com/catalog/product/view/id/177/s/cdna-pcr/category/28/) kit. This is a robust choice for performing differential gene expression studies. This kit is suitable for preparation of sequence libraries from low mRNA input quantities. The cDNA population is [enriched through PCR with low bias](https://nanoporetech.com/resource-centre/low-bias-rna-seq-pcr-cdna-pcr-free-direct-cdna-and-direct-rna-sequencing); an important pre-requisite for the subsequent statistical analysis.   
+[Oxford Nanopore Technologies](https://nanoporetech.com) provides a number of [sequencing solutions](https://nanoporetech.com/rna) to allow users to generate a snapshot of gene expression. This can be achieved by both sequencing the mRNA [directly](https://store.nanoporetech.com/catalog/product/view/id/167/s/direct-rna-sequencing-kit/category/28/), or via a complementary DNA ([cDNA](https://store.nanoporetech.com/catalog/product/view/id/177/s/cdna-pcr/category/28/)) proxy. In contrast to short read sequencing technologies, entire mRNA transcripts can be captured as single reads. The example data provided with this tutorial is from a study based on the [PCR-cDNA](https://store.nanoporetech.com/catalog/product/view/id/177/s/cdna-pcr/category/28/) kit. This is a robust choice for performing differential gene expression studies. This kit is suitable for preparation of sequence libraries from low mRNA input quantities. The cDNA population is [enriched through PCR with low bias](https://nanoporetech.com/resource-centre/low-bias-rna-seq-pcr-cdna-pcr-free-direct-cdna-and-direct-rna-sequencing); an important prerequisite for the subsequent statistical analysis.   
   
-Once sequencing data has been produced from both the experimental and paired control samples (with an appropriate number of biological replicates), the sequence reads can be mapped to the organisms's reference genome. The number of sequences mapping to each gene can be counted, and it is this count data that forms the basis for differential gene expression analysis.  
+Once sequencing data has been produced from both the experimental and paired control samples (with an appropriate number of biological replicates), the sequence reads can be mapped to the organism's reference genome. The number of sequences mapping to each gene can be counted, and it is this count data that forms the basis for differential gene expression analysis.  
 
 There are five goals for this tutorial:
 
@@ -82,7 +82,7 @@ This tutorial does not aim to provide an exhaustive analysis or annotation of th
 
 This tutorial requires a computer workstation running a Linux operating system. The workflow described has been tested using **`Fedora 29`**, **`Centos 7`** and **`Ubuntu 18_04`**. This tutorial has been prepared in the **`Rmarkdown`** file format. This utilises *markdown* (an easy-to-write plain text format as used in many Wiki systems) - see @R-rmarkdown for more information about **`rmarkdown`**. The document template contains chunks of embedded **`R code`** that are dynamically executed during the report preparation. 
 
-The described analytical workflow makes extensive use of the **`conda`** package management and the **`snakemake`** workflow software. These software packages and the functionality of **`Rmarkdown`** provide the source for a rich, reproducible, and extensible tutorial document.
+The described analytical workflow makes extensive use of the **`conda`** package management and the **`snakemake`** workflow software. These software packages and the functionality of **`Rmarkdown`** provide the source for a rich, reproducible and extensible tutorial document.
 
 The workflow contained within this Tutorial performs an authentic bioinformatics analysis and using the whole human genome as a reference sequence. There are some considerations in terms of memory and processor requirement. Indexing the whole human genome for sequence read mapping using **`minimap2`** for example will use at least **`18 Gb`** of memory. The minimal recommended hardware setup for this tutorial is therefore an 4 threaded computer with at least 16 Gb of RAM and 15 Gb of storage space. 
 

@@ -314,9 +314,9 @@ Once we have have the matrix of read counts per gene per sample, the analysis ob
 
 DESeq2 utilises the raw read count data from the previous section to model the between condition variability and to identify the differentially expressed genes. **`DESeq2`** does not use normalised data, but corrects internally for the relative library size to assess measurement precision. 
 
-Pre-filtering is performed at this step of the analysis. In the initial setup of the **`Rmarkdown`** script we evaluated a variable, *`readCountMinThreshold`*, that describes the minimum number of sequence reads that should be considered for statistical analysis. This Pre-filtering step improves the performance of the method. 
+Pre-filtering is performed at this step of the analysis. In the initial setup of the **`Rmarkdown`** script we evaluated a variable, *`readCountMinThreshold`*, that describes the minimum number of sequence reads that should be considered for statistical analysis. This pre-filtering step improves the performance of the method. 
 
-Differential expression results are filtered by adjusted P-value and log2 fold change thresholds (both these thresholds can be configured in the **`config.yaml`** file). The P-value correction is performed according to the *fdr* method of Benjamini & Hochberg (@BH1995).
+Differential expression results are filtered by adjusted p-value and log2 fold change thresholds (both these thresholds can be configured in the **`config.yaml`** file). The p-value correction is performed according to the *fdr* method of Benjamini & Hochberg (@BH1995).
 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=NA}
@@ -344,17 +344,17 @@ write.xlsx(deData[order(deData$padj),], file = xlsDiffExprGenes,
 
 ```
 
-The summary above shows the characteristics of the DESeq2 based differential expression analysis. The summary shows both the number of (and percentage) of genes that have satisfed the thresholds of logFoldChange and adjusted P-value. The complete matrix of data results (no filtering by fold-change or statistical threshold) has been written to an Excel file. This file can be found at the following path.
+The summary above shows the characteristics of the DESeq2 based differential expression analysis. The summary shows both the number of (and percentage) of genes that have satisfed the thresholds of logFoldChange and adjusted p-value. The complete matrix of data results (no filtering by fold-change or statistical threshold) has been written to an Excel file. This file can be found at the following path.
 
 ~~~
 `r xlsDiffExprGenes`
 ~~~
 
-The table \ref{tab:diffExprTable} below shows the top 15 differentially expressed genes as ranked by their adjusted P-value. This list is not filtered for either statistical (adj.P.value) or magnitudinal (logFoldChange) relevance. The complete dataset is presented in the accompanying Excel file described above.
+The table \ref{tab:diffExprTable} below shows the top 15 differentially expressed genes as ranked by their adjusted p-value. This list is not filtered for either statistical (adj.P.value) or magnitudinal (logFoldChange) relevance. The complete dataset is presented in the accompanying Excel file described above.
 
 
 ```{r diffExprTable, echo=FALSE}
-knitr::kable(deData[order(deData$padj)[1:15],], digits = c(2,2,2,2,45,45), caption="The top 15 genes, ranked by adjusted P-value, from the DESeq2 analysis. Key information shown includes the mean reads per sample, log fold change between samples and the false discovery corrected P-value", booktabs=TRUE, table.envir='table*', linesep="")  %>%
+knitr::kable(deData[order(deData$padj)[1:15],], digits = c(2,2,2,2,45,45), caption="The top 15 genes, ranked by adjusted p-value, from the DESeq2 analysis. Key information shown includes the mean reads per sample, log fold change between samples and the false discovery corrected p-value", booktabs=TRUE, table.envir='table*', linesep="")  %>%
   kable_styling(latex_options=c("hold_position"), font_size=9) %>%
   add_footnote(c("No statistical or magnitudinal filter has been applied"))
 ```
@@ -399,7 +399,7 @@ print(plot)
 
 # Volcano plot for condition `r gsub('.+: ', '', deSeqRes@elementMetadata@listData$description[2])`
 
-A volcano plot is a scatter-plot that is used to quickly identify changes in large gene expression data sets composed of replicate data. It plots significance versus fold-change on the y and x axes, respectively. The significance is scaled as a -log10 of the (adjusted) P-value. Volcano plots allow for a simple assessment of systematic variance between sample groups; statistically significant and magnitudinally pronouced changes in gene expression will be manifested as a scattering of data points towards the far top left or top right of the graph.
+A volcano plot is a scatter-plot that is used to quickly identify changes in large gene expression data sets composed of replicate data. It plots significance versus fold-change on the y and x axes, respectively. The significance is scaled as a -log10 of the (adjusted) p-value. Volcano plots allow for a simple assessment of systematic variance between sample groups; statistically significant and magnitudinally pronouced changes in gene expression will be manifested as a scattering of data points towards the far top left or top right of the graph.
 
 ```{r volcanoPlot, echo=FALSE, include=TRUE, fig.margin=FALSE, fig.fullwidth = FALSE, fig.cap="Volcano plot showing distribution of log fold changes and adjusted p values", cache=FALSE}
 
@@ -465,13 +465,15 @@ print(geneOfInterestNormalExpression)
 It is also possible to present a plot that shows the count data for this single gene across the experimental conditions. An example plot is shown below.
 
 
-```{r exprBoxPlot, echo=FALSE, include=TRUE, fig.margin=FALSE, fig.fullwidth = FALSE, fig.cap="Plot showing the distribution of normalised read counts by experimental condition", cache=FALSE}
+```{r exprBoxPlot, echo=FALSE, include=TRUE, fig.margin=FALSE, fig.fullwidth = FALSE, cache=FALSE}
 plot <- ggplot(geneOfInterestNormalExpression, aes(x=group, y=count, colour=group)) + 
   geom_point(position=position_jitter(w=0.1,h=0), size=2) + 
   scale_y_log10() + ggtitle("Distribution of normalised read counts for experimental conditions") + xlab("Experimental Condition") +ylab("normalised read count - log10 scale") + scale_colour_brewer(palette="Paired")
 print(plot)
 
 ```
+*Plot showing the distribution of normalised read counts by experimental condition*
+
 
 The final question is whether this observation is statistically meaningful?
 
@@ -483,7 +485,7 @@ deData[geneOfInterest,]
 
 \fontsize{10}{14}
 
-If we look at the output we can see that the logFoldChange is *`r round(deData[geneOfInterest,]$log2FoldChange, digits=2)`* and the P-value is  *`r round(deData[geneOfInterest,]$pvalue, digits=3)`* (before FDR correction) or *`r round(deData[geneOfInterest,]$padj, digits=3)`* using the BH FDR correction mentioned earlier. 
+If we look at the output we can see that the logFoldChange is *`r round(deData[geneOfInterest,]$log2FoldChange, digits=2)`* and the p-value is  *`r round(deData[geneOfInterest,]$pvalue, digits=3)`* (before FDR correction) or *`r round(deData[geneOfInterest,]$padj, digits=3)`* using the BH FDR correction mentioned earlier. 
 
 
 # Annotation and further analysis of differentially expressed genes
