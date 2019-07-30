@@ -20,15 +20,13 @@ bibliography: Static/Bibliography.bib
 
 
 
-```{r, echo=FALSE, include=FALSE}
+```{r setup, echo=FALSE, include=FALSE}
 knitr::opts_chunk$set(tidy=TRUE, tidy.opts=list(width.cutoff=80), 
                       fig.width=9, fig.height=6, warning=FALSE, message=FALSE, 
                       kable.force.latex=TRUE,
                       highlight=TRUE,
                       cache.path="Analysis/Cache/cDNATutorial/")
 options(width = 100)
-# library(TuPoreIal)  # ONT container package; deprecated ...
-library(tufte)
 library(digest)
 library(ShortRead)   # oh the irony!
 library(ggplot2)
@@ -39,9 +37,9 @@ library(DESeq2)
 library(pcaMethods)
 library(kableExtra)  # rendering of tables...
 library(caTools)     # base64decode for embedded Snakefile
-library(xlsx)        # writing results to Excel files
+library(writexl)     # writing results to Excel files
 library(yaml)
-library(session)     # session persistence added as feature request
+library(session)
 
 source("Static/R/common.R")
 
@@ -120,7 +118,7 @@ It is worth considering some of the characteristics of each set of sequences inc
 processQCFastq <- function(rowname) {
   row <- which(row.names(studyDesign)==rowname)
   file <- as.character(studyDesign[row, "filename"])
-  fastq <- readFastq(file)
+  fastq <- readFastq(file, widthIds=FALSE)
   c(
     reads = formatC(length(fastq), big.mark=","),
     mbs = formatC(round(sum(width(fastq)) / 1000 / 1000, digits=1), big.mark=","),
@@ -295,8 +293,7 @@ knitr::kable(geneCounts[order(rowSums(geneCounts), decreasing=TRUE)[1:10],], cap
 
 
 xlsExpressedGenes <- file.path(resultDir, "ExpressedGenes.xlsx")
-write.xlsx(geneCounts[which(rowSums(geneCounts) > 0),], file = xlsExpressedGenes,
-      sheetName = "ExpressedGenes", append = FALSE)
+write_xlsx(x=as.data.frame(geneCounts[which(rowSums(geneCounts) > 0),]), path=xlsExpressedGenes)
 ```
 
 
@@ -339,8 +336,7 @@ deData <- data.frame(results(deSeqObj, pAdjustMethod="BH"))
 
 
 xlsDiffExprGenes <- file.path(resultDir, "DiffExpressedGenes.xlsx")
-write.xlsx(deData[order(deData$padj),], file = xlsDiffExprGenes,
-      sheetName = "DiffExpressedGenes", append = FALSE)
+write_xlsx(x=deData[order(deData$padj),], path=xlsDiffExprGenes)
 
 ```
 
@@ -438,7 +434,12 @@ The **`R`** code below demonstrates how the mapping characteristics for this gen
 \fontsize{8}{12}
 
 ```{r geneOfInterest, comment=NA} 
+# A gene of interest can be specified by name, for example
 geneOfInterest <- "ENSG00000081870"
+
+# A gene of interest can also be sliced from a data.frame of interest
+geneOfInterest <- rownames(head(geneCounts[order(rowSums(geneCounts), decreasing=TRUE),]))[1]
+
 geneOfInterestRawExpression <- as.data.frame(
   t(rbind(
     count=geneCounts[geneOfInterest,], 

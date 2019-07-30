@@ -4,12 +4,12 @@ channels:
   - r
   - sagrudd
 dependencies:
-  - snakemake-minimal =5.2.4
-  - python =3.6
+  - snakemake-minimal
+  - python
   - samtools
   - minimap2
   - r-essentials
-  - r =3.5.1
+  - r
   - rstudio
   - nanopore-r-cdna-deseq2
   - openjdk

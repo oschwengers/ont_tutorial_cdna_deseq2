@@ -41,7 +41,7 @@ Other dependencies include
 * **`snakemake`** is required for the automation and pipelining of the bioinformatics workflow used for data analysis
 * **`fasta`** format genome reference - the provided `Snakefile` specifies the human genome
 * **`gff`** format genome annotation for associating mapped reads with known genes
-* **`R`** packages including **`Rsubread`**, **`ShortRead`**, **`DESeq2`**, and **`xlsx`** are required for the analysis and interpretation of the genome mapping data, and for preparing results to be written to file. 
+* **`R`** packages including **`Rsubread`**, **`ShortRead`**, **`DESeq2`**, and **`writexl`** are required for the analysis and interpretation of the genome mapping data, and for preparing results to be written to file. 
 
 ### Installation:
 
@@ -68,7 +68,6 @@ Other dependencies include
 5. Initialise conda environment with 
 ```
     source activate cDNA_DESeq2
-    R CMD javareconf > /dev/null 2>&1
 ```
 
 #### Compilation From Source

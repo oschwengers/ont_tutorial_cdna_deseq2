@@ -52,7 +52,6 @@ Editing of the workflow's configuration file, **`config.yaml`**, will allow the 
 5. Initialise the Conda environment 
 ```
     source activate cDNA_DESeq2
-    R CMD javareconf > /dev/null 2>&1
 ```
 
 
