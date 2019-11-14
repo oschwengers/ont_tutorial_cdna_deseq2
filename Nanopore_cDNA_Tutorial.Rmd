@@ -293,7 +293,10 @@ knitr::kable(geneCounts[order(rowSums(geneCounts), decreasing=TRUE)[1:10],], cap
 
 
 xlsExpressedGenes <- file.path(resultDir, "ExpressedGenes.xlsx")
-write_xlsx(x=as.data.frame(geneCounts[which(rowSums(geneCounts) > 0),]), path=xlsExpressedGenes)
+xls_data <- as.data.frame(geneCounts[which(rowSums(geneCounts) > 0),])
+xls_data$gene_id <- rownames(xls_data)
+
+write_xlsx(x=xls_data, path=xlsExpressedGenes)
 ```
 
 
@@ -336,7 +339,10 @@ deData <- data.frame(results(deSeqObj, pAdjustMethod="BH"))
 
 
 xlsDiffExprGenes <- file.path(resultDir, "DiffExpressedGenes.xlsx")
-write_xlsx(x=deData[order(deData$padj),], path=xlsDiffExprGenes)
+
+xls_data_2 <- deData[order(deData$padj),]
+xls_data$gene_id
+write_xlsx(x=xls_data_2, path=xlsDiffExprGenes)
 
 ```
 
