@@ -341,7 +341,7 @@ deData <- data.frame(results(deSeqObj, pAdjustMethod="BH"))
 xlsDiffExprGenes <- file.path(resultDir, "DiffExpressedGenes.xlsx")
 
 xls_data_2 <- deData[order(deData$padj),]
-xls_data$gene_id
+xls_data_2$gene_id <- rownames(xls_data_2)
 write_xlsx(x=xls_data_2, path=xlsDiffExprGenes)
 
 ```
