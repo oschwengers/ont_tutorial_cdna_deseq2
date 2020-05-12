@@ -45,7 +45,7 @@ rule all:
 
 rule download_reference_genome:
   input:
-    HTTP.remote(reference_genome, keep_local=True)
+    HTTP.remote(reference_genome, insecure=True, keep_local=True)
   output:
     ReferenceGenome
   run:
@@ -54,7 +54,7 @@ rule download_reference_genome:
 
 rule download_genome_annotation:
   input:
-    HTTP.remote(genome_annotation, keep_local=True)
+    HTTP.remote(genome_annotation, insecure=True, keep_local=True)
   output:
     GenomeAnnotation
   run:
